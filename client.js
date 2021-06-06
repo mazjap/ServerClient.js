@@ -1,12 +1,12 @@
-const net = require('net')
-const port = 3000
+const net = require("net")
+const port = 3001
 
 const client = net.createConnection({port: port}, () => {
-  console.log('connected to server!')
+  console.log("connected to server!")
 
-  process.stdin.setEncoding('utf8')
+  process.stdin.setEncoding("utf8")
   
-  process.stdin.on('readable', () => {
+  process.stdin.on("readable", () => {
     let chunk
     while ((chunk = process.stdin.read()) !== null) {
       // Send data to server
@@ -14,14 +14,14 @@ const client = net.createConnection({port: port}, () => {
     }
   })
 
-  process.stdin.on('end', () => client.end())
+  process.stdin.on("end", () => client.end())
 })
 
 // Show data from server
-client.on('data', (data) => {
+client.on("data", (data) => {
   console.log(data.toString())
 })
 
-client.on('end', () => {
-  console.log('Goodbye')
+client.on("end", () => {
+  console.log("Goodbye")
 })
