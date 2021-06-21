@@ -23,7 +23,7 @@ const ClientCommands = {
         description: "Removes a client from the server."
     },
     w: {
-        name: " to w",
+        name: "w",
         args: ["clientName", "messages"],
         description: "Sends a message to an individual client."
     },
@@ -60,9 +60,9 @@ function parseCommand(message) {
     const commandTemplate = Commands[Object.keys(Commands).find(key => key == commandName)]
 
     if (args.length !== commandTemplate.args.length && commandName !== "w") {
-        const expected = `Expected: /${commandTemplate.name} ` + commandTemplate.args.reduce((fullMessage, currentItem) => {
-            return fullMessage + ` <currentItem>`
-        })
+        const expected = `Expected: /${commandTemplate.name} ` + (commandTemplate.args.length ? commandTemplate.args.reduce((fullMessage, currentItem) => {
+            return fullMessage + " <" + currentItem + ">"
+        }) : "")
         throw Error(`Command given: "${message}"\n` + expected)
     }
 

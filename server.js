@@ -47,16 +47,18 @@ class Server {
     
         server.clients.push(client)
 
+        const logRequestedCommand = (clientName, commandName) => {
+            server.log(clientName + " requested the command: " + commandName)
+        }
+        
+        // These functions throw
         const usernameCommand = (client, newName) => {
-            server.log(client.name + " requested their name to be changed to " + newName)
+            logRequestedCommand(client.name, "username")
+            
             if (newName) {
-                for (const tmpClient of server.clients) {
-                    console.log(tmpClient.name)
-                    console.log(tmpClient.name === newName)
-                }
-
                 if (includesWhere(server.clients, (tmpClient) => tmpClient.name === newName)) {
-                    server.sendMessageToSelectClients("This name is already taken: " + newName, (tmpClient) => tmpClient.name === client.name)
+                    server.log(client.name + "requested:\n")
+                    server.sendMessageToClients("This name is already taken: " + newName, client)
                 } else {
                     server.sendMessageToSelectClients(client.name + " changed their name to " + newName + ".", tmpClient => { return tmpClient.id !== client.id })
                     client.name = newName
@@ -66,15 +68,27 @@ class Server {
         }
 
         const whisperCommand = (client, toClientName, message) => {
+            logRequestedCommand(client.name, "whisper")
+
+            if (!toClientName) {
+                throw Error("You must provide a client's name:\n/w clientName message")
+            }
+
+            if (!message) {
+                throw Error("You must provide a message:\n/w clientName message")
+            }
+
             const selectedClient = server.clients.find(tmpClient => tmpClient.name == toClientName)
             if (selectedClient) {
-                server.sendMessageToSelectClients(client.name + " whispers: " + message, (tmpClient) => tmpClient.id === selectedClient.id)
+                server.sendMessageToClients(client.name + " whispers: " + message, selectedClient)
             } else {
                 throw Error("Unable to send message to " + toClientName + ". Does this user exist?")
             }
         }
 
         const kickCommand = (client, password, toClientName) => {
+            logRequestedCommand(client.name, "kick")
+
             const selectedClient = server.clients.find(tmpClient => tmpClient.name == toClientName)
 
             if (!selectedClient) {
@@ -85,22 +99,26 @@ class Server {
                 throw Error("Unable to kick client with name " + toClientName + ". Invalid password. (password is 'password')")
             }
             
-            server.sendMessageToSelectClients("You have been kicked from the server by " + client.name + ".", (tmpClient) => tmpClient.id === selectedClient.id)
+            server.sendMessageToClients("You have been kicked from the server by " + client.name + ".", selectedClient)
             server.removeClient(selectedClient.id)
         }
 
         const clientListCommand = () => {
+            logRequestedCommand(client.name, "clientList")
+
             let message = "Client list:"
 
             server.clients.forEach(function(clt) {
                 message += `\n${clt.name}: Id: ${clt.id}`
             })
 
-            server.sendMessageToSelectClients(message, (tmpClient) => tmpClient.id === client.id)
+            server.sendMessageToClients(message, client)
         }
 
         const helpCommand = (client) => {
-            server.sendMessageToSelectClients(CommandParser.helpString(), (tmpClient) => tmpClient.id === client.id)
+            logRequestedCommand(client.name, "help")
+
+            server.sendMessageToClients(CommandParser.helpString(), client)
         }
     
         client.on("data", function(data) {
@@ -176,6 +194,19 @@ class Server {
             }
         }
     }
+
+    sendMessageToClients(msg, clients) {
+        if (clients) {
+            this.log(msg)
+            if (Array.isArray(clients)) {
+                for (const client of clients) {
+                    client.write(msg)
+                }
+            } else {
+                clients.write(msg)
+            }
+        }
+    }
   
     log(...strings) {
         this._log(false, ...strings)
@@ -203,7 +234,7 @@ class Server {
             client.end()
         }
 
-        this.log("Server on port " + this.port + " was terminated")
+        this._log(true, "Server on port " + this.port + " was terminated")
     }
   
     static currentTimestamp() {
